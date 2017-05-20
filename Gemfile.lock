@@ -2,6 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     backports (3.8.0)
+    codeclimate-test-reporter (1.0.7)
+      simplecov
     coveralls (0.8.21)
       json (>= 1.8, < 3)
       simplecov (~> 0.14.1)
@@ -51,6 +53,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  codeclimate-test-reporter (~> 1.0.0)
   coveralls
   json
   minitest (~> 5.0)
