@@ -8,3 +8,4 @@ gem 'minitest', "~> 5.0", :group => :development
 gem 'rake'
 gem 'redic-cluster'
 gem 'simplecov', :group => :development
+gem 'coveralls', require: false
