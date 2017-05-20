@@ -3,9 +3,14 @@ source 'https://rubygems.org'
 gem 'json'
 gem 'sinatra'
 gem 'sinatra-contrib'
-gem "rack-test", "~> 0.6.1", :group => :development
-gem 'minitest', "~> 5.0", :group => :development
 gem 'rake'
 gem 'redic-cluster'
-gem 'simplecov', :group => :development
+gem 'simplecov', require: false
 gem 'coveralls', require: false
+
+group :test do
+  gem "simplecov"
+  gem "codeclimate-test-reporter", "~> 1.0.0"
+  gem "rack-test", "~> 0.6.1"
+  gem 'minitest', "~> 5.0"
+end
