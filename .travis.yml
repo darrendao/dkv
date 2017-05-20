@@ -1,0 +1,10 @@
+before_install:
+  - gem install bundler
+language: ruby
+rvm:
+  - 2.2.3
+  - 2.4.1
+services:
+  - redis-server
+script: 
+  - RACK_ENV=test bundle exec rake test
