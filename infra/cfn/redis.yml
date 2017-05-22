@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Redis cluster in Elasticache
+Parameters:
+  CacheClientTrafficContainer:
+    Type: String
+    Description: VPC Security Groups to allow connection to the Redis cluster
+    Default: sg-0e94c067
+  CacheNodeType:
+    Type: String
+    Description: Cache Node Type
+    Default: cache.t2.micro
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: VPC Subnet IDs for the Redis cluster
+    Default: subnet-c04fb28d,subnet-1527866e,subnet-4eb92027
+  VpcId:
+    Type: String
+    Description: The physical ID of the VPC
+    Default: vpc-5b62e932
+
+Resources:
+  SubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: subnet group for Redis cluster
+      SubnetIds: !Ref SubnetIds
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: redis replication group access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: 
+        - FromPort: 6379
+          ToPort: 6379
+          IpProtocol: tcp
+          SourceSecurityGroupId: !Ref CacheClientTrafficContainer
+
+  ReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      CacheNodeType: !Ref CacheNodeType
+      CacheSubnetGroupName: !Ref SubnetGroup
+      Engine: redis
+      EngineVersion: 3.2.4
+      NumNodeGroups: 3 
+      ReplicasPerNodeGroup: 1
+      ReplicationGroupDescription: Redis cluster
+      SecurityGroupIds: [ !Ref RedisSecurityGroup ]
+
+Outputs:
+  RedisReplicationGroup:
+    Description: Redis Replication Group
+    Value: !Ref ReplicationGroup

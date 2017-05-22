@@ -7,6 +7,7 @@ gem 'rake'
 gem 'redic-cluster'
 gem 'simplecov', require: false
 gem 'coveralls', require: false
+gem 'awspec'
 
 group :test do
   gem "simplecov"
