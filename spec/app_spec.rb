@@ -67,3 +67,17 @@ describe 'DELETE operation' do
     last_response.status.must_equal 404
   end
 end
+
+describe 'HEAD operation' do
+  before do
+    put '/redis/key1', 'value1'
+  end
+  it 'should find the existing key' do
+    head '/redis/key1'
+    last_response.status.must_equal 200
+  end
+  it 'should not find an non-existing key' do
+    head '/redis/nonexistingkey1'
+    last_response.status.must_equal 404
+  end
+end
