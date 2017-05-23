@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: 'Distributed Key Value service'
+
+Parameters:
+  AmiId:
+    Description: 'AMI ID'
+    Type: String
+    Default: ami-9d486cf8
+
+  BastionEC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup::Id'
+    Description: 'ID of the security group allowing SSH access from the bastion'
+    Default: sg-99a8fcf0
+
+  InstanceType:
+    Description: 'EC2 instance type.'
+    Type: String
+    Default: 'm3.medium'
+    AllowedValues: [ 't2.micro', 't2.small', 't2.medium', 'm1.small', 'm1.medium', 'm1.large', 'm1.xlarge', 'm2.xlarge', 'm2.2xlarge', 'm2.4xlarge', 'm3.medium', 'm3.large', 'm3.xlarge', 'm3.2xlarge', 'c1.medium', 'c1.xlarge', 'c3.large', 'c3.xlarge', 'c3.2xlarge', 'c3.4xlarge', 'c3.8xlarge', 'c4.large', 'c4.xlarge', 'c4.2xlarge', 'c4.4xlarge', 'c4.8xlarge', 'g2.2xlarge', 'r3.large', 'r3.xlarge', 'r3.2xlarge', 'r3.4xlarge', 'r3.8xlarge', 'i2.xlarge', 'i2.2xlarge', 'i2.4xlarge', 'i2.8xlarge', 'hi1.4xlarge', 'hs1.8xlarge', 'cr1.8xlarge', 'cc2.8xlarge', 'cg1.4xlarge']
+    ConstraintDescription: 'Must be a valid EC2 instance type.'
+    Default: t2.micro
+
+  KeyName:
+    Description: 'The EC2 Key Pair to allow SSH access to the instances'
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: 'must be the name of an existing EC2 KeyPair.'
+    Default: control
+
+  SubnetIds:
+    Description: 'App subnet IDs'
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Default: subnet-98b920f1,subnet-03228378,subnet-5953ae14
+
+  VpcId:
+    Description: 'Physical ID of the VPC.'
+    Type: 'AWS::EC2::VPC::Id'
+    AllowedPattern: 'vpc-[0-9a-f]{8,8}'
+    Default: vpc-5b62e932
+
+Resources:
+
+  SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security Group for builder instances'
+      VpcId: !Ref VpcId
+
+  IamPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: Policy for builder IAM
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Sid: 'Stmt1357739573947'
+            Action: [
+              's3:*',
+            ]
+            Effect: 'Allow'
+            Resource: '*'
+
+  IamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: 'Allow'
+            Principal:
+              Service: [ 'ec2.amazonaws.com' ]
+            Action: [ 'sts:AssumeRole' ]
+      Path: '/'
+      ManagedPolicyArns:
+        - !Ref IamPolicy
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
+
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: '/'
+      Roles: [ !Ref IamRole ]
+
+  LaunchConfig:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          full_install: [ 'install_cfn', 'install_os_packages' ]
+
+        install_cfn:
+          files:
+            '/etc/cfn/cfn-hup.conf':
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: 'root'
+              group: 'root'
+
+            '/etc/cfn/hooks.d/cfn-auto-reloader.conf':
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets app_update --region ${AWS::Region}
+                runas=root
+
+          commands:
+            start-cfn-hup:
+              command: |
+                /opt/aws/bin/cfn-hup -c /etc/cfn/ -v
+
+        install_os_packages:
+          packages:
+            yum:
+              git: []
+        
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref BastionEC2SecurityGroup
+      UserData:
+        'Fn::Base64':
+          !Sub |
+            #!/bin/bash -xe
+
+            # Log User Data Output on EC2 Instances
+            # http://alestic.com/2010/12/ec2-user-data-output
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets full_install --region ${AWS::Region}
+
+            curl https://amazon-ssm-${AWS::Region}.s3.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm -o /tmp/amazon-ssm-agent.rpm
+            yum install -y /tmp/amazon-ssm-agent.rpm
+
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ASGGroup --region ${AWS::Region}
+
+  ASGGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: 'PT15M'
+        Count: '1'
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: '1'
+        MinInstancesInService: '0'
+        PauseTime: 'PT15M'
+        WaitOnResourceSignals: true
+    Properties:
+      AvailabilityZones: !GetAZs AWS::Region
+      LaunchConfigurationName: !Ref LaunchConfig
+      MaxSize: '1'
+      MinSize: '1'
+      VPCZoneIdentifier: !Ref SubnetIds
+
