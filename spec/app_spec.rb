@@ -6,8 +6,12 @@ def app
   Sinatra::Application
 end
 
+# Start from scratch
 redis = Redic::Cluster.new("redis://localhost:6379")  
 redis.call("FLUSHALL")
+User.all.destroy
+token = SecureRandom.urlsafe_base64(64)
+user = User.create(token: token)
 
 describe 'my example app' do
   it 'should successfully return a greeting' do
@@ -18,6 +22,7 @@ end
 
 describe 'GET operation' do
   before do
+    header 'Authentication', token
     put '/api/v1/kv/key1', 'value1'
     put '/api/v1/kv/key2', 'value2'
   end
@@ -39,6 +44,7 @@ end
 
 describe 'SET operation' do
   before do
+    header 'Authentication', token
     put '/api/v1/kv/key1', 'value1'
   end
   it 'should overwrite existing key value' do
@@ -54,6 +60,7 @@ end
 
 describe 'DELETE operation' do
   before do
+    header 'Authentication', token
     put '/api/v1/kv/key1', 'value1'
   end
   it 'should delete the key and value from the data store' do
@@ -70,6 +77,7 @@ end
 
 describe 'HEAD operation' do
   before do
+    header 'Authentication', token
     put '/api/v1/kv/key1', 'value1'
   end
   it 'should find the existing key' do
