@@ -4,7 +4,6 @@ require 'sinatra/namespace'
 require 'redic/cluster'
 require 'data_mapper'
 require './lib/user.rb'
-require './lib/hit.rb'
 
 configure do
   set :kv_store, {}
