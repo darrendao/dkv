@@ -17,7 +17,7 @@ describe 'health check' do
   it 'should return pong if I ping it' do
     get '/ping'
     last_response.status.must_equal 200
-    last_response.body.must_include 'ping'
+    last_response.body.must_include 'pong'
   end
 end
 
