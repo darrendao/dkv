@@ -13,6 +13,11 @@ configure do
   DataMapper.setup(:default, ENV['DATABASE_URL'] || "sqlite3://#{Dir.pwd}/#{env}.db")
   DataMapper.finalize
   DataMapper.auto_upgrade!
+
+  register ::Sinatra::Namespace
+  set :protection, true
+  set :protect_from_csrf, true
+  set :bind, '0.0.0.0'
 end
 
 def authenticate!
@@ -20,8 +25,8 @@ def authenticate!
   halt 403 unless @user
 end
 
-get '/' do
-  'Hello world!'
+get '/ping' do
+  'pong'
 end
 
 namespace '/api/v1' do
