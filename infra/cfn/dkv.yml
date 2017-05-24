@@ -6,17 +6,11 @@ Parameters:
   AmiId:
     Description: 'AMI ID'
     Type: String
-    Default: ami-9d486cf8
-
-  BastionEC2SecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup::Id'
-    Description: 'ID of the security group allowing SSH access from the bastion'
-    Default: sg-99a8fcf0
+    Default: ami-4191b524
 
   InstanceType:
     Description: 'EC2 instance type.'
     Type: String
-    Default: 'm3.medium'
     AllowedValues: [ 't2.micro', 't2.small', 't2.medium', 'm1.small', 'm1.medium', 'm1.large', 'm1.xlarge', 'm2.xlarge', 'm2.2xlarge', 'm2.4xlarge', 'm3.medium', 'm3.large', 'm3.xlarge', 'm3.2xlarge', 'c1.medium', 'c1.xlarge', 'c3.large', 'c3.xlarge', 'c3.2xlarge', 'c3.4xlarge', 'c3.8xlarge', 'c4.large', 'c4.xlarge', 'c4.2xlarge', 'c4.4xlarge', 'c4.8xlarge', 'g2.2xlarge', 'r3.large', 'r3.xlarge', 'r3.2xlarge', 'r3.4xlarge', 'r3.8xlarge', 'i2.xlarge', 'i2.2xlarge', 'i2.4xlarge', 'i2.8xlarge', 'hi1.4xlarge', 'hs1.8xlarge', 'cr1.8xlarge', 'cc2.8xlarge', 'cg1.4xlarge']
     ConstraintDescription: 'Must be a valid EC2 instance type.'
     Default: t2.micro
@@ -27,16 +21,11 @@ Parameters:
     ConstraintDescription: 'must be the name of an existing EC2 KeyPair.'
     Default: control
 
-  SubnetIds:
-    Description: 'App subnet IDs'
-    Type: 'List<AWS::EC2::Subnet::Id>'
-    Default: subnet-98b920f1,subnet-03228378,subnet-5953ae14
-
   VpcId:
     Description: 'Physical ID of the VPC.'
     Type: 'AWS::EC2::VPC::Id'
     AllowedPattern: 'vpc-[0-9a-f]{8,8}'
-    Default: vpc-5b62e932
+    Default: vpc-bcbe27d5
 
 Resources:
 
@@ -106,13 +95,13 @@ Resources:
                 [cfn-auto-reloader-hook]
                 triggers=post.update
                 path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets app_update --region ${AWS::Region}
+                action=cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets app_update --region ${AWS::Region}
                 runas=root
 
           commands:
             start-cfn-hup:
               command: |
-                /opt/aws/bin/cfn-hup -c /etc/cfn/ -v
+                cfn-hup -c /etc/cfn/ -v
 
         install_os_packages:
           packages:
@@ -125,24 +114,31 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
-        - !Ref BastionEC2SecurityGroup
+        - Fn::ImportValue:
+            !Sub ${VpcId}:bastion-security-group:id
       UserData:
         'Fn::Base64':
           !Sub |
             #!/bin/bash -xe
 
+            # Ensure our PATH is set correctly (on Amazon Linux, cfn-signal is in /opt/aws/bin)
+            . ~/.bash_profile
+
             # Log User Data Output on EC2 Instances
             # http://alestic.com/2010/12/ec2-user-data-output
             exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets full_install --region ${AWS::Region}
 
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets full_install --region ${AWS::Region}
+            yum groupinstall -y 'Development Tools'
+            yum install -y ruby-devel mysql-devel sqlite-devel libxml2-devel libxslt-devel
 
-            curl https://amazon-ssm-${AWS::Region}.s3.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm -o /tmp/amazon-ssm-agent.rpm
-            yum install -y /tmp/amazon-ssm-agent.rpm
 
-            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ASGGroup --region ${AWS::Region}
+            wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
+            chmod +x ./install
+            ./install auto
+
+            cfn-signal -e $? --stack ${AWS::StackName} --resource ASGGroup --region ${AWS::Region}
 
   ASGGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
@@ -158,8 +154,67 @@ Resources:
         WaitOnResourceSignals: true
     Properties:
       AvailabilityZones: !GetAZs AWS::Region
+      LoadBalancerNames: [ !Ref ELB ]
       LaunchConfigurationName: !Ref LaunchConfig
       MaxSize: '1'
       MinSize: '1'
-      VPCZoneIdentifier: !Ref SubnetIds
+      VPCZoneIdentifier:  !Split
+        - ","
+        - Fn::ImportValue:
+            !Sub ${VpcId}:private-subnet:ids
 
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: dkv
+
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      AutoScalingGroups: [ !Ref ASGGroup ]
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      DeploymentGroupName: dkv-deployment-group
+      ServiceRoleArn: arn:aws:iam::020571450075:role/codedeploytest
+
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for ELB
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        -
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+
+  ELB:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      ConnectionDrainingPolicy:
+        Enabled: true
+        Timeout: 60
+      CrossZone: true
+      HealthCheck:
+        Target: HTTP:80/ping
+        HealthyThreshold: 3
+        UnhealthyThreshold: 3
+        Interval: 10
+        Timeout: 5
+      Listeners:
+        -
+          LoadBalancerPort: 80
+          InstancePort: 4567
+          Protocol: HTTP
+      Scheme: internet-facing
+      SecurityGroups: [ !Ref ELBSecurityGroup  ]
+      Subnets: !Split
+        - ","
+        - Fn::ImportValue:
+            !Sub ${VpcId}:egress-subnet:ids
