@@ -34,6 +34,12 @@ Resources:
     Properties:
       GroupDescription: 'Security Group for builder instances'
       VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 4567
+          ToPort: 4567
+          CidrIp: 10.0.0.0/21
 
   IamPolicy:
     Type: 'AWS::IAM::ManagedPolicy'
@@ -203,7 +209,7 @@ Resources:
         Timeout: 60
       CrossZone: true
       HealthCheck:
-        Target: HTTP:80/ping
+        Target: HTTP:4567/ping
         HealthyThreshold: 3
         UnhealthyThreshold: 3
         Interval: 10
