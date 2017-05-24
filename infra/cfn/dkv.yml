@@ -120,6 +120,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
+        - !Ref SecurityGroup
         - Fn::ImportValue:
             !Sub ${VpcId}:bastion-security-group:id
       UserData:
