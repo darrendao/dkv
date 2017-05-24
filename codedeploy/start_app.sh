@@ -1,3 +1,3 @@
 killall ruby2.3
 cd /app/dkv
-nohup ruby2.3 app.rb &
+/usr/local/bin/puma -p 4567 -d
