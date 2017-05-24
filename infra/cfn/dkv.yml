@@ -131,8 +131,9 @@ Resources:
             cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets full_install --region ${AWS::Region}
 
             yum groupinstall -y 'Development Tools'
-            yum install -y ruby-devel mysql-devel sqlite-devel libxml2-devel libxslt-devel
-
+            yum install -y  ruby23 ruby23-devel mysql-devel sqlite-devel libxml2-devel libxslt-devel
+            gem2.3 install bundler
+            ln -s /usr/local/bin/bundle /usr/bin/bundle
 
             wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
             chmod +x ./install
