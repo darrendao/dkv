@@ -218,4 +218,4 @@ Resources:
       Subnets: !Split
         - ","
         - Fn::ImportValue:
-            !Sub ${VpcId}:egress-subnet:ids
+            !Sub ${VpcId}:ingress-subnet:ids
