@@ -13,10 +13,11 @@ User.all.destroy
 token = SecureRandom.urlsafe_base64(64)
 user = User.create(token: token)
 
-describe 'my example app' do
-  it 'should successfully return a greeting' do
-    get '/'
-    last_response.body.must_include 'Hello world!'
+describe 'health check' do
+  it 'should return pong if I ping it' do
+    get '/ping'
+    last_response.status.must_equal 200
+    last_response.body.must_include 'ping'
   end
 end
 

@@ -20,8 +20,8 @@ def authenticate!
   halt 403 unless @user
 end
 
-get '/' do
-  'Hello world!'
+get '/ping' do
+  'pong'
 end
 
 namespace '/api/v1' do

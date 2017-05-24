@@ -1,0 +1,12 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /app/dkv
+hooks:
+  AfterInstall:
+    - location: codedeploy/post_install.sh
+      runas: root
+  ApplicationStart:
+    - location: codedeploy/start_app.sh
+      runas: root
