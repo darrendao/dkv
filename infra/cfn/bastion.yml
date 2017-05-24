@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a bastion host
+Metadata:
+  Name: bastion
+  Version: 1.1.1
+Parameters:
+  AmiId:
+    Description: AMI Id
+    Type: AWS::EC2::Image::Id
+    Default: ami-4191b524
+  InstanceType:
+    Default: t2.micro
+    Description: The bastion instance type
+    Type: String
+  KeyName:
+    Description: The bastion key pair name
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: control
+  Name:
+    Default: bastion
+    Description: The name of the bastion host (only if your VPC requires multiple bastions, but why?)
+    Type: String
+  SubnetType:
+    Default: ingress
+    Description: The subnets in which to deploy the bastion host (only if you have a legacy VPC)
+    Type: String
+  VpcId:
+    Description: The VPC ID
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-bcbe27d5
+
+Resources:
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The bastion ingress security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  TrafficContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The bastion host source security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - 
+          FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+          SourceSecurityGroupId: !Ref BastionSecurityGroup
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        -
+          PolicyName: Policy
+          PolicyDocument:
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - ec2:AssociateAddress
+                Resource: "*"
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref Role
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref TrafficContainerSecurityGroup
+        - !Ref BastionSecurityGroup
+      UserData:
+        'Fn::Base64':
+          !Sub |
+            #!/bin/bash -ex
+
+            # Ensure our PATH is set correctly (on Amazon Linux, cfn-signal is in /opt/aws/bin)
+            . ~/.bash_profile
+
+            # Apply all available security updates
+            yum update -y --security
+
+            # All done!
+            cfn-signal --region ${AWS::Region} --resource AutoScalingGroup --stack ${AWS::StackName}
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: 1
+      MinSize: 1
+      VPCZoneIdentifier: !Split
+        - ","
+        - Fn::ImportValue:
+            !Sub ${VpcId}:ingress-subnet:ids
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
+Outputs:
+  BastionSecurityGroupId:
+    Export:
+      Name: !Sub ${VpcId}:${Name}-security-group:id
+    Value: !Ref TrafficContainerSecurityGroup
