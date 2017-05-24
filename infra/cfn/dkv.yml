@@ -34,6 +34,12 @@ Resources:
     Properties:
       GroupDescription: 'Security Group for builder instances'
       VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 4567
+          ToPort: 4567
+          CidrIp: 10.0.0.0/21
 
   IamPolicy:
     Type: 'AWS::IAM::ManagedPolicy'
@@ -114,6 +120,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
+        - !Ref SecurityGroup
         - Fn::ImportValue:
             !Sub ${VpcId}:bastion-security-group:id
       UserData:
@@ -131,8 +138,9 @@ Resources:
             cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets full_install --region ${AWS::Region}
 
             yum groupinstall -y 'Development Tools'
-            yum install -y ruby-devel mysql-devel sqlite-devel libxml2-devel libxslt-devel
-
+            yum install -y  ruby23 ruby23-devel mysql-devel sqlite-devel libxml2-devel libxslt-devel
+            gem2.3 install bundler
+            ln -s /usr/local/bin/bundle /usr/bin/bundle
 
             wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
             chmod +x ./install
@@ -202,7 +210,7 @@ Resources:
         Timeout: 60
       CrossZone: true
       HealthCheck:
-        Target: HTTP:80/ping
+        Target: HTTP:4567/ping
         HealthyThreshold: 3
         UnhealthyThreshold: 3
         Interval: 10
@@ -217,4 +225,4 @@ Resources:
       Subnets: !Split
         - ","
         - Fn::ImportValue:
-            !Sub ${VpcId}:egress-subnet:ids
+            !Sub ${VpcId}:ingress-subnet:ids
