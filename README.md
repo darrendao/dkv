@@ -3,6 +3,9 @@
 
 This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store.
 
+The app is deployed on EC2 instances behind ELB.
+Redis cluster is deployed and managed via Elasticache (cluster mode enabled with sharding).
+
 Demo site: http://dkv.aws.darrendao.net
 
 ## Requirements
