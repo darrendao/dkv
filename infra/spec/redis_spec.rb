@@ -1,8 +1,8 @@
 require 'spec_helper'
 
-redis_name = 'ddr1ppu4crjl79sz'
-redis_shard_count = 3
-redis_node_count = 3
+redis_name = 'rer12jxoysi8s321'
+redis_shard_count = 2
+redis_node_count = 2
 
 (1..redis_shard_count).each do |shard_id|
   (1..redis_node_count).each do |node_id|

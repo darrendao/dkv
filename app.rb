@@ -20,11 +20,6 @@ configure do
   set :bind, '0.0.0.0'
 end
 
-def authenticate!
-  @user = User.find(token: @request_payload[:token])
-  halt 403 unless @user
-end
-
 get '/ping' do
   'pong'
 end
@@ -32,23 +27,22 @@ end
 namespace '/api/v1' do
   before do
     halt 403 unless request.env['HTTP_AUTHENTICATION']
-    @u = User.first(token: request.env['HTTP_AUTHENTICATION'])
-    halt 403 unless @u
+    @user = User.first(token: request.env['HTTP_AUTHENTICATION'])
+    halt 403 unless @user
   end
 
   head '/kv/:key' do
-    key = params[:key]
+    key = @user.namespace(params[:key])
     ret = settings.redis_store.call('EXISTS', key)
     if ret == 0
       status 404
-      "NOT FOUND"
     else
-      "OK"
+      status 200
     end
   end
 
   get '/kv/:key' do
-    key = params[:key]
+    key = @user.namespace(params[:key])
     val = settings.redis_store.call("GET", key)
     if val
       val
@@ -59,13 +53,13 @@ namespace '/api/v1' do
   end
 
   put '/kv/:key' do
-    key = params[:key]
+    key = @user.namespace(params[:key])
     val = request.body.read
     settings.redis_store.call("SET", key, val)
   end
 
   delete '/kv/:key' do
-    key = params[:key]
+    key = @user.namespace(params[:key])
     ret = settings.redis_store.call("DEL", key)
     if ret == 0
       status 404
@@ -80,6 +74,7 @@ post '/users' do
   token = SecureRandom.urlsafe_base64(64)
   user = User.create(token: token)
   if user.id
+    status 201
     user.to_json
   else
     status 400

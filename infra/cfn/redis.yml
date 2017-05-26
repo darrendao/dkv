@@ -56,3 +56,5 @@ Outputs:
   TrafficContainerSecurityGroup:
     Description: Security group for accessing Redis cluster
     Value: !Ref TrafficContainerSecurityGroup
+    Export:
+      Name: !Sub ${VpcId}:redis-traffic-container-sg
