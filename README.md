@@ -52,6 +52,10 @@ RACK_ENV=test bundle exec rake test
 ```
 bundle exec rake spec
 ```
+## Build & Deployment
+Build is done via TravisCI: travis-ci.org/darrendao/dkv
+Code coverage is managed via Coveralls: https://coveralls.io/github/darrendao/dkv
+Deployment is done via CodePipeline and CodeDeploy
 
 ## Demo
 Obtain an authentication token
