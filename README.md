@@ -3,6 +3,8 @@
 
 This repo is a coding exercise for implementing a distributed key value service.
 
+Demo site: http://dkv.aws.darrendao.net
+
 ## Requirements
 * Ruby 2.2.3 or greater. Refer to rbenv or RVM for managing your Ruby installations on your development environment.
 * bundler gem installed (needed for dependency management)
@@ -37,6 +39,35 @@ ruby app.rb
 * Tests are written as specs and stored under the spec directory.
 * Tests can be run as followed
 ```
-RACK_ENV=test rake test
+RACK_ENV=test bundle exec rake test
 ```
 * This repo has been integrated with Travis CI. When changes are made to the repo, Travis CI will automatically run the tests.
+
+## Running infrastructure tests
+* Test for AWS infrastructure written as specs and stored under the infra/spec directory.
+* Test can be run as followed (in the infra directory)
+```
+bundle exec rake spec
+```
+
+## Demo
+Obtain an authentication token
+```
+$ curl --request POST http://dkv.aws.darrendao.net/users
+```
+Inserting a key value
+```
+curl --request PUT http://dkv.aws.darrendao.net/api/v1/kv/demokey -d helloworld -H "Authentication: $AUTH_TOKEN" -v
+```
+Fetching
+```
+curl http://dkv.aws.darrendao.net/api/v1/kv/demokey -H "Authentication: $AUTH_TOKEN" -v
+```
+Deleting
+```
+curl --request DELETE http://dkv.aws.darrendao.net/api/v1/kv/demokey -H "Authentication: $AUTH_TOKEN" -v
+```
+Checking to see if a key exists
+```
+curl --request HEAD http://dkv.aws.darrendao.net/api/v1/kv/demokey -H "Authentication: $AUTH_TOKEN" -v
+```
