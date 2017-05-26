@@ -6,13 +6,13 @@ require 'data_mapper'
 require './lib/user.rb'
 
 configure do
-  set :kv_store, {}
-  set :redis_store, Redic::Cluster.new("redis://localhost:6379")
-
   env = ENV['RACK_ENV'] || "development"
   DataMapper.setup(:default, ENV['DATABASE_URL'] || "sqlite3://#{Dir.pwd}/#{env}.db")
   DataMapper.finalize
   DataMapper.auto_upgrade!
+
+  redis_host =  ENV['REDIS_HOST'] || 'localhost'
+  set :redis_store, Redic::Cluster.new("redis://#{redis_host}:6379")
 
   register ::Sinatra::Namespace
   set :protection, true

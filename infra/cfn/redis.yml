@@ -14,7 +14,7 @@ Resources:
   TrafficContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !ImportValue Intuit-vpc-1:vpc:id
+      VpcId: !Ref VpcId
       GroupDescription: redis replication group access
 
   SubnetGroup:
