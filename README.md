@@ -1,7 +1,7 @@
 # dkv
 [![Coverage Status](https://coveralls.io/repos/github/darrendao/dkv/badge.svg?branch=master)](https://coveralls.io/github/darrendao/dkv?branch=master)
 
-This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store.
+This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store. This repo also includes Cloudformation templates needed for deploying the service in AWS.
 
 The app is deployed on EC2 instances behind ELB.
 Redis cluster is deployed and managed via Elasticache (cluster mode enabled with sharding).
