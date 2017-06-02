@@ -1,7 +1,12 @@
 # dkv
 [![Coverage Status](https://coveralls.io/repos/github/darrendao/dkv/badge.svg?branch=master)](https://coveralls.io/github/darrendao/dkv?branch=master)
+[![Code Climate](https://codeclimate.com/github/darrendao/dkv/badges/gpa.svg)](https://codeclimate.com/github/darrendao/dkv)
+[![Build Status](https://travis-ci.org/darrendao/dkv.svg?branch=master)](https://travis-ci.org/darrendao/dkv)
 
-This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store.
+This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store. This repo also includes Cloudformation templates needed for deploying the service in AWS.
+
+The app is deployed on EC2 instances behind ELB.
+Redis cluster is deployed and managed via Elasticache (cluster mode enabled with sharding).
 
 Demo site: http://dkv.aws.darrendao.net
 
@@ -49,6 +54,10 @@ RACK_ENV=test bundle exec rake test
 ```
 bundle exec rake spec
 ```
+## Build & Deployment
+* Build is done via TravisCI: https://travis-ci.org/darrendao/dkv
+* Code coverage is managed via Coveralls: https://coveralls.io/github/darrendao/dkv
+* Deployment is done via CodePipeline and CodeDeploy
 
 ## Demo
 Obtain an authentication token
