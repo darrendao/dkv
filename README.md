@@ -1,5 +1,7 @@
 # dkv
 [![Coverage Status](https://coveralls.io/repos/github/darrendao/dkv/badge.svg?branch=master)](https://coveralls.io/github/darrendao/dkv?branch=master)
+[![Code Climate](https://codeclimate.com/github/darrendao/dkv/badges/gpa.svg)](https://codeclimate.com/github/darrendao/dkv)
+[![Build Status](https://travis-ci.org/darrendao/dkv.svg?branch=master)](https://travis-ci.org/darrendao/dkv)
 
 This repo is a coding exercise for implementing a distributed key value service. It is a simple web app written in Sinatra with Redis cluster as the key value store. This repo also includes Cloudformation templates needed for deploying the service in AWS.
 
