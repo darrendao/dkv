@@ -45,7 +45,7 @@ namespace '/api/v1' do
     key = @user.namespace(params[:key])
     val = settings.redis_store.call("GET", key)
     if val
-      val
+      "demo #{val}"
     else
       status 404
       "NOT FOUND"
